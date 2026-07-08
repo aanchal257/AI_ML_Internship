@@ -1,6 +1,4 @@
-# Employee Retention Prediction
 
-# Problem Statement
 Predict whether an employee will leave the company or stay based on working conditions.
 
 # Steps Followed
@@ -10,5 +8,5 @@ Predict whether an employee will leave the company or stay based on working cond
 - Logistic Regression model
 - Model evaluation
 
-# Result
-Accuracy achieved: ~0.8+
+# Try it here:
+https://employee-retention-prediction-efpwvrx55rtrmshssezqfp.streamlit.app/
