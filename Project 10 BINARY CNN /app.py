@@ -1,109 +1,286 @@
-import os
-import numpy as np
 import streamlit as st
+import tensorflow as tf
+import numpy as np
 from PIL import Image
-from tensorflow.keras.models import load_model
 
-# ---------------------------------------------------------
-# Config — must match what the model was trained on
-# ---------------------------------------------------------
-IMG_WIDTH, IMG_HEIGHT = 150, 150
-
-# Dynamically get the folder where app.py lives, then attach the model filename
-current_dir = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(current_dir, "gender_image_classifier.h5")
-
+# -----------------------------------
+# Page Settings
+# -----------------------------------
 st.set_page_config(
-    page_title="Male vs Female Classifier",
-    page_icon="🧑",
-    layout="centered",
+    page_title="AI Eye Gender Classifier",
+    page_icon="👁️",
+    layout="wide"
 )
 
-
-# ---------------------------------------------------------
-# Model loading (cached so it only loads once per session)
-# ---------------------------------------------------------
+# -----------------------------------
+# Load Model
+# -----------------------------------
 @st.cache_resource
-def get_model():
-    if not os.path.isfile(MODEL_PATH):
-        return None, f"Model file not found at '{MODEL_PATH}'."
-    try:
-        model = load_model(MODEL_PATH)
-        return model, None
-    except Exception as e:
-        return None, str(e)
+def load_model():
+    return tf.keras.models.load_model("model.keras")
+
+model = load_model()
+
+IMG_SIZE = 128
 
 
-# ---------------------------------------------------------
-# Preprocessing (matches training: resize -> RGB -> /255)
-# ---------------------------------------------------------
-def preprocess_image(pil_img: Image.Image) -> np.ndarray:
-    pil_img = pil_img.convert("RGB")  # handles grayscale/PNG safely
-    pil_img = pil_img.resize((IMG_WIDTH, IMG_HEIGHT))
-    x = np.array(pil_img, dtype=np.float32)
-    x = x / 255.0
-    x = np.expand_dims(x, axis=0)  # add batch dimension
-    return x
+# -----------------------------------
+# Styling
+# -----------------------------------
+st.markdown("""
+<style>
+
+.stApp {
+    background: #F1F5F9;
+}
+
+/* Remove default header */
+header {
+    visibility: hidden;
+}
+
+/* Main Banner */
+
+.banner {
+    background: linear-gradient(135deg,#2563EB,#7C3AED);
+    padding: 35px;
+    border-radius: 25px;
+    text-align:center;
+    color:white;
+    margin-bottom:30px;
+    box-shadow:0px 10px 30px rgba(37,99,235,0.25);
+}
+
+.banner h1 {
+    font-size:45px;
+    margin-bottom:10px;
+}
+
+.banner p {
+    font-size:20px;
+}
 
 
-# ---------------------------------------------------------
-# UI
-# ---------------------------------------------------------
-st.title("🧑 Male vs Female Classifier 👩")
-st.write("Upload a face image to get a prediction.")
+/* Cards */
 
-model, load_error = get_model()
+.card {
 
-if load_error:
-    st.error(
-        "Could not load the model.\n\n"
-        f"Details: {load_error}\n\n"
-        "Make sure `gender_image_classifier.h5` is in the same folder as `app.py`."
+    background:white;
+    padding:25px;
+    border-radius:22px;
+    box-shadow:0px 8px 25px rgba(0,0,0,0.08);
+    height:100%;
+}
+
+
+/* Upload */
+
+[data-testid="stFileUploader"] {
+
+    background:white;
+    border-radius:15px;
+    padding:15px;
+    border:2px dashed #2563EB;
+
+}
+
+
+/* Prediction badge */
+
+.badge {
+
+    font-size:32px;
+    font-weight:bold;
+    padding:15px;
+    border-radius:15px;
+    text-align:center;
+    background:#EFF6FF;
+    color:#1D4ED8;
+    margin:20px 0;
+
+}
+
+
+/* Confidence */
+
+.confidence {
+
+    background:#F8FAFC;
+    padding:15px;
+    border-radius:15px;
+    text-align:center;
+
+}
+
+
+.small-text{
+
+    color:#64748B;
+    font-size:16px;
+
+}
+
+</style>
+
+""", unsafe_allow_html=True)
+
+
+
+# -----------------------------------
+# Header
+# -----------------------------------
+
+st.markdown("""
+<div class="banner">
+
+<h1>👁️ AI Eye Gender Classification</h1>
+
+<p>Deep Learning based image prediction system</p>
+
+</div>
+""", unsafe_allow_html=True)
+
+
+
+# -----------------------------------
+# Upload Image
+# -----------------------------------
+
+uploaded_file = st.file_uploader(
+    "Upload an eye image",
+    type=["jpg","jpeg","png"]
+)
+
+
+
+if uploaded_file:
+
+    image = Image.open(uploaded_file).convert("RGB")
+
+
+    left,right = st.columns(2)
+
+
+    with left:
+
+        st.markdown(
+        '<div class="card">',
+        unsafe_allow_html=True
+        )
+
+        st.subheader("📷 Input Image")
+
+        st.image(
+            image,
+            use_container_width=True
+        )
+
+        st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+        )
+
+
+
+    # preprocessing
+
+    img = image.resize(
+        (IMG_SIZE,IMG_SIZE)
     )
-    st.stop()
 
-uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+    img = np.array(img)/255.0
 
-if uploaded_file is not None:
-    try:
-        img = Image.open(uploaded_file)
-        st.image(img, caption="Uploaded Image", use_column_width=True)
+    img = np.expand_dims(
+        img,
+        axis=0
+    )
 
-        with st.spinner("Classifying..."):
-            x = preprocess_image(img)
-            predictions = model.predict(x)
-            pred = float(predictions[0][0])
 
-        # class_mode='binary' with flow_from_directory assigns classes
-        # alphabetically -> female=0, male=1
-        if pred >= 0.5:
-            label = "Male 🧑"
-            confidence = pred
-        else:
-            label = "Female 👩"
-            confidence = 1 - pred
+    with st.spinner("AI is analyzing..."):
 
-        st.success(f"Prediction: **{label}**")
-        st.write(f"Confidence: **{confidence * 100:.2f}%**")
-        st.progress(min(max(confidence, 0.0), 1.0))
+        prediction = model.predict(
+            img,
+            verbose=0
+        )
 
-        with st.expander("Raw model output"):
-            st.write("predictions:", predictions.tolist())
-            st.write("predictions.shape:", predictions.shape)
-            st.caption("Score close to 0 → Female, score close to 1 → Male.")
 
-    except Exception as e:
-        st.error(f"Something went wrong while processing the image: {e}")
+    confidence = float(prediction[0][0])
+
+
+
+    # Change labels if your dataset mapping is opposite
+
+    if confidence >= 0.5:
+
+        result = "👨 Male"
+        score = confidence
+
+    else:
+
+        result = "👩 Female"
+        score = 1-confidence
+
+
+
+    with right:
+
+
+        st.markdown(
+        '<div class="card">',
+        unsafe_allow_html=True
+        )
+
+
+        st.subheader("🤖 AI Prediction")
+
+
+        st.markdown(
+        f"""
+        <div class="badge">
+        {result}
+        </div>
+        """,
+        unsafe_allow_html=True
+        )
+
+
+        st.markdown(
+        f"""
+        <div class="confidence">
+
+        <h3>Confidence</h3>
+
+        <h1>{score*100:.2f}%</h1>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+        )
+
+
+        st.progress(
+            score
+        )
+
+
+        st.markdown(
+        '<p class="small-text">Prediction generated by CNN model</p>',
+        unsafe_allow_html=True
+        )
+
+
+        st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+        )
+
+
+    st.success("Prediction completed successfully 🎯")
+
+
+
 else:
-    st.info("👆 Upload a JPG or PNG image to get a prediction.")
 
-st.markdown("---")
-st.caption(
-    "Model: CNN (3× Conv2D + MaxPooling, Dense(128) + Dropout, sigmoid output), "
-    "150×150 RGB input, trained for binary male/female classification."
-)
-st.caption(
-    "⚠️ Note: gender-classification models can be biased by their training data "
-    "and may not perform equally well across all ages, ethnicities, or presentations. "
-    "Predictions should be treated as approximate, not authoritative."
-)
+    st.info(
+        "👆 Upload an eye image to start prediction"
+    )
