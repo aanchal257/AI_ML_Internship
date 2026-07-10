@@ -21,7 +21,134 @@ MODEL_PATH_CANDIDATES = [
 ]
 CLASS_INDICES_PATH = os.path.join(APP_DIR, "class_indices.json")
  
-st.set_page_config(page_title="Eye Gender Classifier", page_icon="👁️", layout="centered")
+st.set_page_config(page_title="IRID — Eye Scan", page_icon="◉", layout="centered")
+ 
+# ------------------------------------------------------------
+# Styling — "optical scan" theme: deep slate background, warm
+# iris-amber accent, cool sclera-cyan secondary, serif display
+# type for the headline, monospace for the readout numbers.
+# ------------------------------------------------------------
+ACCENT = "#D98E3E"     # iris amber
+ACCENT2 = "#6FA8B0"    # sclera cyan
+TRACK = "#24343E"      # gauge track / borders
+BG = "#101B24"
+SURFACE = "#17242E"
+TEXT = "#EDF4F3"
+TEXT_MUTED = "#8FA3A8"
+ 
+st.markdown(
+    f"""
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+      .stApp {{
+        background: radial-gradient(circle at 50% -10%, #16262F 0%, {BG} 55%);
+        color: {TEXT};
+      }}
+      [data-testid="stHeader"] {{ background: transparent; }}
+      #MainMenu, footer {{ visibility: hidden; }}
+ 
+      .irid-hero {{
+        text-align: center;
+        padding: 1.2rem 0 0.4rem 0;
+      }}
+      .irid-ring {{
+        width: 64px; height: 64px; margin: 0 auto 1rem auto;
+        border-radius: 50%;
+        background:
+          radial-gradient({ACCENT} 0%, {ACCENT} 28%, transparent 30%),
+          conic-gradient({ACCENT2} 0deg 340deg, transparent 340deg 360deg);
+        box-shadow: 0 0 24px rgba(217,142,62,0.35);
+      }}
+      .irid-title {{
+        font-family: 'Fraunces', serif;
+        font-weight: 600;
+        font-size: 2.6rem;
+        letter-spacing: 0.01em;
+        margin: 0;
+        color: {TEXT};
+      }}
+      .irid-tagline {{
+        font-family: 'Inter', sans-serif;
+        color: {TEXT_MUTED};
+        font-size: 1rem;
+        margin-top: 0.35rem;
+      }}
+ 
+      .irid-card {{
+        background: {SURFACE};
+        border: 1px solid {TRACK};
+        border-radius: 18px;
+        padding: 1.6rem;
+        margin-top: 1.4rem;
+      }}
+ 
+      [data-testid="stFileUploaderDropzone"] {{
+        background: {BG} !important;
+        border: 1px dashed {TRACK} !important;
+        border-radius: 14px !important;
+      }}
+      [data-testid="stFileUploaderDropzone"]:hover {{
+        border-color: {ACCENT2} !important;
+      }}
+ 
+      [data-testid="stImage"] img {{
+        border-radius: 14px;
+        border: 1px solid {TRACK};
+      }}
+ 
+      .irid-gauge-wrap {{
+        position: relative;
+        width: 168px; height: 168px;
+        margin: 0.4rem auto 0.8rem auto;
+      }}
+      .irid-gauge-hole {{
+        position: absolute; top: 14px; left: 14px;
+        width: 140px; height: 140px;
+        border-radius: 50%;
+        background: {SURFACE};
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+      }}
+      .irid-gauge-pct {{
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.9rem; font-weight: 500;
+        color: {TEXT};
+      }}
+      .irid-gauge-label {{
+        font-family: 'Inter', sans-serif;
+        font-size: 0.68rem; letter-spacing: 0.12em;
+        text-transform: uppercase; color: {TEXT_MUTED};
+        margin-top: 0.15rem;
+      }}
+      .irid-result-label {{
+        font-family: 'Inter', sans-serif;
+        font-size: 0.72rem; letter-spacing: 0.14em;
+        text-transform: uppercase; color: {TEXT_MUTED};
+        text-align: center; margin-bottom: 0.3rem;
+      }}
+      .irid-result-value {{
+        font-family: 'Fraunces', serif;
+        font-weight: 600; font-size: 1.6rem;
+        text-align: center; color: {ACCENT};
+        margin-bottom: 0.4rem;
+      }}
+      .irid-footnote {{
+        font-family: 'Inter', sans-serif;
+        font-size: 0.76rem; color: {TEXT_MUTED};
+        text-align: center; margin-top: 1rem;
+        line-height: 1.5;
+      }}
+    </style>
+ 
+    <div class="irid-hero">
+      <div class="irid-ring"></div>
+      <p class="irid-title">IRID</p>
+      <p class="irid-tagline">Drop in a close-up eye photo and let the scan read it.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
  
  
 # ------------------------------------------------------------
@@ -78,21 +205,6 @@ def clean_label(raw_label: str) -> str:
 # ------------------------------------------------------------
 # UI
 # ------------------------------------------------------------
-st.title("👁️ Eye Gender Classifier")
-st.write(
-    "Upload a close-up photo of a human eye and the model will predict "
-    "whether it belongs to a male or female, based on a CNN trained on "
-    "the [Eyes RTTE dataset](https://www.kaggle.com/datasets/pavelbiz/eyes-rtte)."
-)
- 
-with st.sidebar:
-    st.header("About")
-    st.markdown(
-        "- Model: custom CNN (binary classifier)\n"
-        f"- Input size: {IMG_SIZE[0]}x{IMG_SIZE[1]}\n"
-        "- Trained in Google Colab, deployed with Streamlit"
-    )
- 
 try:
     model = load_model()
     idx_to_class = load_class_names()
@@ -101,18 +213,19 @@ except FileNotFoundError as e:
     st.code(str(e))
     st.stop()
  
+st.markdown('<div class="irid-card">', unsafe_allow_html=True)
 uploaded_file = st.file_uploader(
-    "Choose an eye image", type=["jpg", "jpeg", "png", "bmp"]
+    "Choose an eye image", type=["jpg", "jpeg", "png", "bmp"], label_visibility="collapsed"
 )
  
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
  
-    col1, col2 = st.columns([1, 1])
+    col1, col2 = st.columns([1, 1], gap="large")
     with col1:
-        st.image(image, caption="Uploaded image", use_container_width=True)
+        st.image(image, use_container_width=True)
  
-    with st.spinner("Analyzing..."):
+    with st.spinner("Scanning..."):
         x = preprocess_image(image)
         prob = float(model.predict(x, verbose=0)[0][0])  # sigmoid output, class "1"
  
@@ -122,19 +235,40 @@ if uploaded_file is not None:
         predicted_label = clean_label(idx_to_class.get(predicted_idx, str(predicted_idx)))
  
     with col2:
-        st.subheader("Prediction")
-        st.metric(label="Predicted class", value=predicted_label)
-        st.metric(label="Confidence", value=f"{confidence * 100:.1f}%")
-        st.progress(confidence)
- 
-    st.caption(
-        "Note: this model reflects patterns in its training data only "
-        "and should not be treated as a reliable or fair predictor of "
-        "gender in any real-world or sensitive application."
-    )
+        pct = confidence * 100
+        deg = confidence * 360
+        st.markdown(
+            f"""
+            <p class="irid-result-label">Scan result</p>
+            <p class="irid-result-value">{predicted_label}</p>
+            <div class="irid-gauge-wrap" style="background: conic-gradient({ACCENT} {deg}deg, {TRACK} {deg}deg 360deg); border-radius: 50%;">
+              <div class="irid-gauge-hole">
+                <span class="irid-gauge-pct">{pct:.0f}%</span>
+                <span class="irid-gauge-label">confidence</span>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 else:
-    st.info("Upload an image to get a prediction.")
+    st.markdown(
+        f'<p style="text-align:center; color:{TEXT_MUTED}; font-family:Inter, sans-serif; '
+        f'font-size:0.9rem; margin: 0.6rem 0;">Accepts JPG, PNG, or BMP — one image at a time.</p>',
+        unsafe_allow_html=True,
+    )
+st.markdown("</div>", unsafe_allow_html=True)
  
+st.markdown(
+    '<p class="irid-footnote">This is a pattern-matching demo, not a reliable or fair '
+    "judge of anyone's identity — treat results as illustrative only.</p>",
+    unsafe_allow_html=True,
+)
+ 
+
+
+
+
+
 
 
 
