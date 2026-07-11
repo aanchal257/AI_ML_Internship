@@ -9,3 +9,5 @@ A deep learning web application that classifies an uploaded eye image as **Male*
 * Confidence score
 * Interactive Streamlit interface
 
+# Try it here:
+https://binary-cnn-vpfvut29kitrhmqhoy7wsy.streamlit.app/
