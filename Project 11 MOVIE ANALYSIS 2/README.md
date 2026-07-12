@@ -2,12 +2,12 @@ An interactive Streamlit dashboard that analyzes KGF 2 movie reviews using Huggi
 
 # Tech Stack
 
--Streamlit
--Python
--Pandas
--Hugging Face Transformers
--PyTorch
--Scikit-learn 
+- Streamlit
+- Python
+- Pandas
+- Hugging Face Transformers
+- PyTorch
+- Scikit-learn 
 
 Try it here:
 https://movie-review-gmeqwnbwuhgbbrtqu7ofyg.streamlit.app/
