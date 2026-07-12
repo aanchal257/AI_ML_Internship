@@ -17,3 +17,5 @@ Project 8(RAG CHATBOT) - https://rag-chatbot-aomrbpdwtnok9u2nmacnqw.streamlit.ap
 Project 9(LINEAR REGRESSION) - https://linear-regression-rbt3ko8k7jfmkrjkgcazuk.streamlit.app/
 
 Project 10(MOVIE ANALYSIS 1) - https://analyzing-review-vvtdcvnw7iq8r5ey9fm2hz.streamlit.app/
+
+Project 11(MOVIE ANALYSIS 2) - https://movie-review-gmeqwnbwuhgbbrtqu7ofyg.streamlit.app/
